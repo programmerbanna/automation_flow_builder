@@ -90,13 +90,22 @@ const handleConditionNode = (
   const targetLabel = result ? "TRUE" : "FALSE";
 
   const edge = automation.edges.find(
-    (e) => e.source === node.id && (e as any).label === targetLabel,
+    (e) =>
+      e.source === node.id &&
+      String((e as any).label).toUpperCase() === targetLabel,
   );
 
-  if (!edge)
+  if (!edge) {
+    console.error(
+      `[Flow Debug] Available edges from this node:`,
+      automation.edges
+        .filter((e) => e.source === node.id)
+        .map((e) => ({ id: e.id, label: (e as any).label })),
+    );
     throw new Error(
       `${targetLabel} edge is missing for condition node ${node.id}`,
     );
+  }
 
   const nextNode = automation.nodes.find((n) => n.id === edge.target);
   if (!nextNode)

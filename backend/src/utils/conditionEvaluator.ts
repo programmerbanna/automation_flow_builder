@@ -13,8 +13,8 @@ export interface ConditionRule {
  * Evaluates a single rule against the provided email
  */
 const evaluateRule = (rule: ConditionRule, email: string): boolean => {
-  const targetValue = email.toLowerCase();
-  const compareValue = (rule.value || "").toLowerCase();
+  const targetValue = (email || "").toLowerCase().trim();
+  const compareValue = (rule.value || "").toLowerCase().trim();
 
   switch (rule.operator) {
     case "equals":
@@ -41,25 +41,37 @@ export const evaluateCondition = (
   rules: ConditionRule[],
   email: string,
 ): boolean => {
+  console.log(`[Condition Debug] Starting evaluation for email: "${email}"`);
+  console.log(
+    `[Condition Debug] Rules to check:`,
+    JSON.stringify(rules, null, 2),
+  );
+
   if (!rules || !Array.isArray(rules) || rules.length === 0) {
+    console.log(`[Condition Debug] No rules found, returning FALSE`);
     return false;
   }
 
   // Initial result from the first rule
   let result = evaluateRule(rules[0], email);
+  console.log(`[Condition Debug] Step 0 (Rule 1) result: ${result}`);
 
   // Apply subsequent rules with their joins
   for (let i = 1; i < rules.length; i++) {
     const rule = rules[i];
     const ruleResult = evaluateRule(rule, email);
+    const oldResult = result;
 
     if (rule.join === "AND") {
       result = result && ruleResult;
     } else if (rule.join === "OR") {
       result = result || ruleResult;
     }
-    // If join is missing for subsequent rules, assume AND for safety or just keep current result
+    console.log(
+      `[Condition Debug] Step ${i} (Rule ${i + 1}) [${rule.join}]: ${oldResult} -> ${result} (Rule output: ${ruleResult})`,
+    );
   }
 
+  console.log(`[Condition Debug] FINAL EVALUATION RESULT: ${result}`);
   return result;
 };
