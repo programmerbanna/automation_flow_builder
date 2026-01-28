@@ -88,7 +88,7 @@ export const createAutomation = async (
 // @route   GET /api/automations
 // @access  Public
 export const getAutomations = async (
-  req: Request,
+  _req: Request,
   res: Response<ApiResponse>,
 ): Promise<void> => {
   try {

@@ -21,7 +21,7 @@ app.use("/api/automations", automationRoutes);
 app.use("/api/automations-test", testRunRoutes);
 
 // Health check route
-app.get("/api/health", (req: Request, res: Response) => {
+app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     message: "Automation Flow Builder API",
@@ -30,7 +30,7 @@ app.get("/api/health", (req: Request, res: Response) => {
 });
 
 // 404 handler
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: "Route not found",
@@ -38,7 +38,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     success: false,
