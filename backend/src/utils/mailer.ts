@@ -18,8 +18,9 @@ const initializeTransporter = async (): Promise<Transporter> => {
   const smtpPass = process.env.SMTP_PASS;
 
   if (smtpHost && smtpPort && smtpUser && smtpPass) {
-    // Use configured SMTP
-    transporter = nodemailer.createTransport({
+    const isGmail = smtpHost.includes("gmail.com");
+
+    const transportConfig: any = {
       host: smtpHost,
       port: parseInt(smtpPort),
       secure: parseInt(smtpPort) === 465,
@@ -27,9 +28,21 @@ const initializeTransporter = async (): Promise<Transporter> => {
         user: smtpUser,
         pass: smtpPass,
       },
-    });
+      // Essential for cloud stability
+      connectionTimeout: 15000, // 15 seconds
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
+    };
 
-    console.log("✅ SMTP transporter initialized");
+    // If it's Gmail, use the built-in nodemailer service profile
+    if (isGmail) {
+      transportConfig.service = "gmail";
+    }
+
+    transporter = nodemailer.createTransport(transportConfig);
+    console.log(
+      `✅ SMTP transporter initialized (${isGmail ? "Gmail" : "Custom SMTP"})`,
+    );
   } else {
     // Use Ethereal for testing
     const testAccount = await nodemailer.createTestAccount();
@@ -64,6 +77,37 @@ export const sendEmail = async (
   message: string,
 ): Promise<{ messageId: string; previewUrl?: string }> => {
   try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+
+    // IF RESEND API KEY IS PROVIDED, USE WEB API (Bypass Render Port Block)
+    if (resendApiKey) {
+      console.log("🚀 Sending email via Resend Web API...");
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.SMTP_FROM || "Automation <onboarding@resend.dev>",
+          to: [to],
+          subject: subject,
+          text: message,
+          html: `<p>${message.replace(/\n/g, "<br>")}</p>`,
+        }),
+      });
+
+      const data = (await response.json()) as any;
+
+      if (!response.ok) {
+        throw new Error(data.message || "Resend API error");
+      }
+
+      console.log(`📧 Email sent via Resend! ID: ${data.id}`);
+      return { messageId: data.id };
+    }
+
+    // FALLBACK TO SMTP (Current method)
     const emailTransporter = await initializeTransporter();
 
     const mailOptions = {
@@ -76,8 +120,6 @@ export const sendEmail = async (
     };
 
     const info = await emailTransporter.sendMail(mailOptions);
-
-    // Generate preview URL for Ethereal
     const previewUrl = nodemailer.getTestMessageUrl(info);
 
     if (previewUrl) {
